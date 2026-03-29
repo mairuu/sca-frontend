@@ -15,15 +15,22 @@
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 
 	import { resolve } from '$app/paths';
-	import type { ChapterSummary } from '$lib/api/endpoints/chapter';
 	import { slide } from 'svelte/transition';
+
+	export type Chapter = {
+		id: string;
+		number: string;
+		title?: string;
+		progress?: number;
+		created_at: string;
+	};
 
 	let {
 		volume,
 		chapters
 	}: {
 		volume: string;
-		chapters: ChapterSummary[];
+		chapters: Chapter[];
 	} = $props();
 
 	let collapsed = $state(false);
@@ -63,12 +70,19 @@
 {#if !collapsed}
 	<div class="grid" transition:slide>
 		{#each chapters as chapter (chapter.id)}
+			{@const COMPLETE_THRESHOLD = 0.99}
 			<a
 				data-chapter-id={chapter.id}
-				class="group flex items-center border-b border-base-content/10 py-3 text-sm hover:bg-primary/60"
+				class="flex items-center border-b border-base-content/10 py-3 text-sm hover:bg-primary/60"
 				href={resolve(`/(app)/chapter/[id]`, { id: chapter.id })}
 			>
-				<div class="grid w-12 shrink-0 place-items-center group-visited:text-success">
+				<div
+					class={{
+						'grid w-12 shrink-0 place-items-center': true,
+						'text-primary': chapter.progress !== undefined && chapter.progress < COMPLETE_THRESHOLD,
+						'text-success': chapter.progress !== undefined && chapter.progress > COMPLETE_THRESHOLD
+					}}
+				>
 					{chapter.number}
 				</div>
 				<div class="flex-1">

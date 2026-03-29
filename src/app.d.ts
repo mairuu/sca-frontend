@@ -6,6 +6,8 @@ declare global {
 		// interface Locals {}
 		// interface PageData {}
 		interface PageState {
+			// chapters
+			readProgress?: number;
 			fromChapterId?: string;
 		}
 		// interface Platform {}

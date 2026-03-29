@@ -7,8 +7,13 @@
 	import { createPullToNext } from '$lib/components/chapter/pullToNext.svelte';
 	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
-	import { goto } from '$app/navigation';
+	import { afterNavigate, beforeNavigate, goto, replaceState } from '$app/navigation';
 	import Nav from './Nav.svelte';
+	import { buildFetcher } from '$lib/auth/fetcher';
+	import { markChaptersRead } from '$lib/api/endpoints/history';
+	import { apiBase } from '$lib/config';
+	import { page } from '$app/state';
+	import { tick } from 'svelte';
 
 	const { data }: PageProps = $props();
 	const chapter = $derived(data.chapter);
@@ -104,6 +109,41 @@
 			navHidden = true;
 		}
 	}
+
+	const fetcher = buildFetcher(fetch);
+
+	function calculateProgress() {
+		const scrollTop = window.scrollY;
+		const scrollHeight = document.documentElement.scrollHeight;
+		const clientHeight = window.innerHeight;
+		return Math.min(1, scrollTop / (scrollHeight - clientHeight));
+	}
+
+	function restoreProgress(progress: number) {
+		const scrollHeight = document.documentElement.scrollHeight;
+		const clientHeight = window.innerHeight;
+		window.scrollTo(0, progress * (scrollHeight - clientHeight));
+	}
+
+	beforeNavigate((e) => {
+		if (e.willUnload) {
+			return;
+		}
+		const progress = calculateProgress();
+		markChaptersRead(apiBase, fetcher, [{ id: chapter.id, progress }]);
+	});
+
+	afterNavigate(async () => {
+		if (page.state.readProgress) {
+			restoreProgress(page.state.readProgress);
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			replaceState(page.url.href, { ...page.state, readProgress: undefined });
+		} else {
+			await tick();
+			const progress = calculateProgress();
+			markChaptersRead(apiBase, fetcher, [{ id: chapter.id, progress: progress }]);
+		}
+	});
 </script>
 
 <svelte:head>

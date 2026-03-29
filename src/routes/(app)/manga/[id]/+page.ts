@@ -1,4 +1,5 @@
 import { listChapters } from '$lib/api/endpoints/chapter';
+import { listMangaReads } from '$lib/api/endpoints/history';
 import { buildFetcher } from '$lib/auth/fetcher';
 import { apiBase } from '$lib/config';
 import type { PageLoad } from './$types';
@@ -6,7 +7,7 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ params, fetch }) => {
 	const fetcher = buildFetcher(fetch);
 
-	const paged = await listChapters(apiBase, fetcher, {
+	const a = listChapters(apiBase, fetcher, {
 		filter: {
 			manga_ids: [params.id]
 		},
@@ -17,5 +18,13 @@ export const load: PageLoad = async ({ params, fetch }) => {
 		orders: [{ field: 'number', direction: 'desc' }]
 	});
 
-	return { chapters: paged.items, totalChapters: paged.pagination.total_items };
+	const b = listMangaReads(apiBase, fetcher, params.id);
+
+	const [chapters, reads] = await Promise.all([a, b]);
+
+	return {
+		chapters: chapters.items,
+		totalChapters: chapters.pagination.total_items,
+		reads: reads.items
+	};
 };

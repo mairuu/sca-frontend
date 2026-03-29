@@ -8,9 +8,9 @@
 	import { resolve } from '$app/paths';
 	import ChapterGroup from './ChapterGroup.svelte';
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import Nav from './Nav.svelte';
-	import { goto, invalidate } from '$app/navigation';
+	import { afterNavigate, goto, invalidate } from '$app/navigation';
 	import { resolveObjectUrl, resolveThumbnailUrl } from '$lib/cdn';
 	import ImagePreviewDialog from '$lib/components/image/ImagePreviewDialog.svelte';
 	import {
@@ -21,39 +21,25 @@
 	import { buildFetcher } from '$lib/auth/fetcher';
 	import { apiBase } from '$lib/config';
 	import { auth } from '$lib/auth/auth.svelte';
+	import { groupBy } from '$lib/collection/group';
 
 	const props: PageProps = $props();
 
-	const { title, synopsis } = $derived(props.data.manga);
+	const manga = $derived(props.data.manga);
+	const readMap = $derived(Object.fromEntries(props.data.reads.map((c) => [c.chapter_id, c])));
 	const chapters = $derived(props.data.chapters);
 	const coverUrl = $derived(props.data.coverUrl);
 
-	onMount(() => {
-		const fromChapterId = page.state.fromChapterId as string | undefined;
-		if (!fromChapterId) return;
-		if (!chapters.some((c) => c.id === fromChapterId)) return;
-		document
-			.querySelector(`[data-chapter-id="${fromChapterId}"]`)
-			?.scrollIntoView({ block: 'center' });
-	});
+	const chaptersWithProgress = $derived(
+		chapters.map((chapter) => ({
+			...chapter,
+			progress: readMap[chapter.id]?.progress
+		}))
+	);
 
-	function groupBy<T>(arr: T[], keyFn: (item: T) => string): Record<string, T[]> {
-		return arr.reduce(
-			(groups, item) => {
-				const key = keyFn(item);
-				if (!groups[key]) {
-					groups[key] = [];
-				}
-				groups[key].push(item);
-				return groups;
-			},
-			{} as Record<string, T[]>
-		);
-	}
-
-	const groupByVolume = $derived(
+	const chapterByVolume = $derived(
 		(
-			Object.entries(groupBy(chapters, (chapter) => chapter.volume || '')) as [
+			Object.entries(groupBy(chaptersWithProgress, (chapter) => chapter.volume || '')) as [
 				string,
 				typeof chapters
 			][]
@@ -90,6 +76,17 @@
 		inLibrary = !inLibrary;
 	}
 
+	afterNavigate(async () => {
+		const fromChapterId = page.state.fromChapterId;
+		if (!fromChapterId) return;
+		if (!chapters.some((c) => c.id === fromChapterId)) return;
+
+		await tick();
+		document
+			.querySelector(`[data-chapter-id="${fromChapterId}"]`)
+			?.scrollIntoView({ block: 'center' });
+	});
+
 	onMount(() => {
 		if (!auth.isLoggedIn) return;
 
@@ -112,7 +109,7 @@
 
 <Nav onBack={handleGoBack}>
 	<div class="line-clamp-1">
-		{title}
+		{manga.title}
 	</div>
 </Nav>
 
@@ -135,7 +132,7 @@
 		<h1
 			class="mt-auto text-center text-[calc(max(min(2rem,3vw),1rem))] leading-tight font-bold sm:text-left"
 		>
-			{title}
+			{manga.title}
 		</h1>
 	</div>
 
@@ -165,7 +162,7 @@
 	{/if}
 
 	<div class="my-4 px-4 text-sm text-base-content/60">
-		{#each synopsis.split('\n') as line, i (i)}
+		{#each manga.synopsis.split('\n') as line, i (i)}
 			<p class="my-4">{line}</p>
 		{/each}
 	</div>
@@ -204,7 +201,7 @@
 {/snippet}
 
 {#snippet tab_chapters()}
-	{#each groupByVolume as [volume, chapters] (volume)}
+	{#each chapterByVolume as [volume, chapters] (volume)}
 		<ChapterGroup {volume} {chapters} />
 	{/each}
 {/snippet}

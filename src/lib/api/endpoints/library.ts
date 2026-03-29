@@ -16,17 +16,6 @@ export type LibraryMangaSummary = {
 	total_mangas: number;
 };
 
-// backend
-// func (h *Handler) RegisterRoutes(router gin.IRouter) {
-// 	library := router.Group("my/library")
-// 	{
-// 		library.GET("", h.GetLibrarySummary)
-// 		library.GET("mangas", h.GetLibrary)
-// 		library.PUT("mangas", h.UpsertLibraryMangas)
-// 		library.GET("mangas/:manga_id", h.GetLibraryManga)
-// 	}
-// }
-
 export async function getLibrarySummary(
 	apiBase: string,
 	fetcher: Fetch,
