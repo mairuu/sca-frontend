@@ -37,6 +37,7 @@
 	},
 	"dependencies": {
 		"@lucide/svelte": "^0.575.0",
-		"@sveltejs/adapter-node": "^5.5.4"
+		"@sveltejs/adapter-node": "^5.5.4",
+		"prom-client": "^15.1.3"
 	}
 }
